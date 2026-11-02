@@ -1,0 +1,400 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <!-- 設定網頁編碼為 UTF-8，支援中文與特殊符號 -->
+    <meta charset="UTF-8">
+    <!-- 設定響應式視口，讓手機與電腦都能良好顯示 -->
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>萌萌節奏派對 🎵</title>
+    <style>
+        /* === CSS 樣式區段：打造可愛粉嫩風格 === */
+        
+        /* 設定全域字型與背景，使用柔和的粉紅漸層 */
+        body {
+            margin: 0;
+            padding: 0;
+            background: linear-gradient(135deg, #ff9a9e 0%, #fecfef 99%, #fecfef 100%);
+            font-family: 'Comic Sans MS', 'Microsoft JhengHei', sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            overflow: hidden; /* 防止捲動軸出現 */
+            user-select: none; /* 防止文字被選取反白 */
+        }
+
+        /* 背景音符動畫容器 */
+        .bg-animation {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            z-index: -1; /* 確保背景在遊戲畫面下方 */
+        }
+
+        /* 漂浮音符的基礎樣式 */
+        .floating-note {
+            position: absolute;
+            bottom: -50px;
+            font-size: 24px;
+            animation: floatUp 6s linear infinite;
+            opacity: 0.6;
+        }
+
+        /* 定義音符往上漂浮的動畫關鍵格 */
+        @keyframes floatUp {
+            0% { transform: translateY(0) rotate(0deg); opacity: 0.8; }
+            100% { transform: translateY(-105vh) rotate(360deg); opacity: 0; }
+        }
+
+        /* 遊戲主容器，採用可愛圓角白框與柔和陰影 */
+        .game-container {
+            background: rgba(255, 255, 255, 0.85);
+            padding: 20px 30px;
+            border-radius: 25px;
+            box-shadow: 0 10px 25px rgba(255, 105, 180, 0.3);
+            text-align: center;
+            border: 4px solid #fff;
+            width: 400px;
+        }
+
+        /* 遊戲標題樣式 */
+        h1 {
+            color: #ff6584;
+            margin-top: 0;
+            margin-bottom: 10px;
+            font-size: 28px;
+            text-shadow: 2px 2px 0px #ffe4e1;
+        }
+
+        /* 分數顯示面板 */
+        .score-board {
+            font-size: 20px;
+            color: #555;
+            margin-bottom: 15px;
+            font-weight: bold;
+        }
+
+        /* 遊戲軌道區塊（共4個軌道） */
+        .tracks-area {
+            position: relative;
+            height: 400px;
+            background: #fff0f5;
+            border-radius: 15px;
+            display: flex;
+            justify-content: space-around;
+            overflow: hidden;
+            border: 2px dashed #ffb6c1;
+            margin-bottom: 15px;
+        }
+
+        /* 單一軌道樣式 */
+        .track {
+            position: relative;
+            width: 22%;
+            height: 100%;
+            background: rgba(255, 255, 255, 0.4);
+            border-left: 1px solid #fae1dd;
+            border-right: 1px solid #fae1dd;
+        }
+
+        /* 判定線（音符需要按下的大致位置） */
+        .hit-line {
+            position: absolute;
+            bottom: 60px;
+            width: 100%;
+            height: 6px;
+            background-color: #ff6584;
+            border-radius: 3px;
+            box-shadow: 0 0 8px #ff6584;
+        }
+
+        /* 底部按鍵提示指示器 */
+        .key-indicator {
+            position: absolute;
+            bottom: 10px;
+            width: 100%;
+            height: 40px;
+            background-color: #ffb6c1;
+            color: white;
+            font-size: 18px;
+            font-weight: bold;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            border-radius: 10px;
+            box-shadow: 0 4px 0 #ff8da1;
+            transition: transform 0.05s, background-color 0.05s;
+        }
+
+        /* 當按鍵被按下時的指示器樣式（透過 JS 動態加上 active 類別） */
+        .key-indicator.active {
+            background-color: #ff477e;
+            transform: translateY(3px);
+            box-shadow: 0 1px 0 #d0315c;
+        }
+
+        /* 下落音符的樣式 */
+        .note {
+            position: absolute;
+            top: -40px;
+            width: 100%;
+            height: 40px;
+            background: linear-gradient(135deg, #ff758c 0%, #ff7eb3 100%);
+            border-radius: 50%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 20px;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.15);
+        }
+
+        /* 開始遊戲按鈕 */
+        #start-btn {
+            background-color: #ff6584;
+            color: white;
+            border: none;
+            padding: 12px 30px;
+            font-size: 18px;
+            font-weight: bold;
+            border-radius: 20px;
+            cursor: pointer;
+            box-shadow: 0 5px 0 #d94e6c;
+            transition: all 0.1s;
+        }
+
+        /* 按鈕點擊時的互動效果 */
+        #start-btn:active {
+            transform: translateY(4px);
+            box-shadow: 0 1px 0 #d94e6c;
+        }
+
+        /* 遊戲提示文字 */
+        .instructions {
+            font-size: 13px;
+            color: #888;
+            margin-top: 10px;
+        }
+    </style>
+</head>
+<body>
+
+    <!-- 背景音符飄浮動畫層 -->
+    <div class="bg-animation" id="bgAnimation"></div>
+
+    <!-- 遊戲外框主介面 -->
+    <div class="game-container">
+        <h1>🎵 萌萌節奏派對 🎵</h1>
+        <div class="score-board">分數: <span id="score">0</span></div>
+        
+        <!-- 遊戲軌道區 -->
+        <div class="tracks-area" id="tracksArea">
+            <!-- 軌道 0 (對應鍵盤 D) -->
+            <div class="track" data-index="0">
+                <div class="hit-line"></div>
+                <div class="key-indicator" id="key-0">D</div>
+            </div>
+            <!-- 軌道 1 (對應鍵盤 F) -->
+            <div class="track" data-index="1">
+                <div class="hit-line"></div>
+                <div class="key-indicator" id="key-1">F</div>
+            </div>
+            <!-- 軌道 2 (對應鍵盤 J) -->
+            <div class="track" data-index="2">
+                <div class="hit-line"></div>
+                <div class="key-indicator" id="key-2">J</div>
+            </div>
+            <!-- 軌道 3 (對應鍵盤 K) -->
+            <div class="track" data-index="3">
+                <div class="hit-line"></div>
+                <div class="key-indicator" id="key-3">K</div>
+            </div>
+        </div>
+
+        <!-- 開始按鈕 -->
+        <button id="start-btn">開始遊戲</button>
+        <div class="instructions">使用鍵盤按鍵：<b>D</b>、<b>F</b>、<b>J</b>、<b>K</b> 點擊音符！</div>
+    </div>
+
+    <script>
+        /* === JavaScript 互動邏輯區段 === */
+
+        // 取得 DOM 元素
+        const scoreDisplay = document.getElementById('score');
+        const startBtn = document.getElementById('start-btn');
+        const tracksArea = document.getElementById('tracksArea');
+        const tracks = document.querySelectorAll('.track');
+        const bgAnimation = document.getElementById('bgAnimation');
+
+        let score = 0;           // 遊戲分數
+        let isPlaying = false;   // 遊戲是否正在進行中
+        let gameInterval = null; // 產生音符的計時器
+        let notes = [];          // 儲存場上所有音符物件的陣列
+
+        // 鍵盤按鍵對應的軌道索引對照表
+        const keyMap = {
+            'd': 0, 'D': 0,
+            'f': 1, 'F': 1,
+            'j': 2, 'J': 2,
+            'k': 3, 'K': 3
+        };
+
+        // 【背景音符動畫生成器】隨機在背景生成漂浮音符
+        function createBgNotes() {
+            const symbols = ['🎵', '🎶', '⭐', '💖', '🌸'];
+            const note = document.createElement('div');
+            note.classList.add('floating-note');
+            // 隨機選擇圖示
+            note.innerText = symbols[Math.floor(Math.random() * symbols.length)];
+            // 隨機水平位置
+            note.style.left = Math.random() * 100 + 'vw';
+            // 隨機動畫大小與速度
+            note.style.fontSize = (Math.random() * 16 + 16) + 'px';
+            note.style.animationDuration = (Math.random() * 3 + 4) + 's';
+            
+            bgAnimation.appendChild(note);
+
+            // 動畫結束後自動移除 DOM 元素以節省記憶體
+            setTimeout(() => {
+                note.remove();
+            }, 6000);
+        }
+        // 每 500 毫秒生成一個背景音符
+        setInterval(createBgNotes, 500);
+
+        // 【開始遊戲按鈕點擊事件】
+        startBtn.addEventListener('click', () => {
+            startGame();
+        });
+
+        // 初始化/重置並開始遊戲
+        function startGame() {
+            // 清除現存的所有音符 DOM
+            document.querySelectorAll('.note').forEach(n => n.remove());
+            notes = [];
+            score = 0;
+            scoreDisplay.innerText = score;
+            isPlaying = true;
+            startBtn.innerText = "遊戲進行中...";
+            startBtn.disabled = true;
+
+            // 定期隨機在某個軌道生成下落音符
+            if (gameInterval) clearInterval(gameInterval);
+            gameInterval = setInterval(() => {
+                if (isPlaying) {
+                    spawnNote();
+                }
+            }, 800); // 每 0.8 秒生成一顆音符
+        }
+
+        // 【生成下落音符函數】
+        function spawnNote() {
+            // 隨機選一個軌道 (0 到 3)
+            const trackIndex = Math.floor(Math.random() * 4);
+            const targetTrack = tracks[trackIndex];
+
+            // 建立音符元素
+            const noteEl = document.createElement('div');
+            noteEl.classList.add('note');
+            noteEl.innerText = ['💖', '⭐', '🎵'][Math.floor(Math.random() * 3)];
+            targetTrack.appendChild(noteEl);
+
+            // 定義音符物件存入陣列，追蹤位置與狀態
+            const noteObj = {
+                element: noteEl,
+                trackIndex: trackIndex,
+                top: -40,       // 初始頂部距離 (px)
+                speed: 3.5,     // 下落速度
+                active: true    // 是否還在畫面中可被擊中
+            };
+
+            notes.push(noteObj);
+        }
+
+        // 【遊戲主循環 (Game Loop)】使用 requestAnimationFrame 讓動畫流暢
+        function gameLoop() {
+            if (isPlaying) {
+                // 更新每個音符的位置
+                for (let i = notes.length - 1; i >= 0; i--) {
+                    let note = notes[i];
+                    if (!note.active) continue;
+
+                    note.top += note.speed; // 讓音符往下移動
+                    note.element.style.top = note.top + 'px';
+
+                    // 如果音符掉出判定線下方（超過 370px），代表漏接
+                    if (note.top > 370) {
+                        note.active = false;
+                        note.element.remove();
+                        notes.splice(i, 1); // 從陣列中移除
+                        
+                        // 漏接扣分（最低歸零）
+                        score = Math.max(0, score - 5);
+                        scoreDisplay.innerText = score;
+                    }
+                }
+            }
+            requestAnimationFrame(gameLoop);
+        }
+        // 啟動主循環
+        requestAnimationFrame(gameLoop);
+
+        // 【鍵盤點擊監聽事件】
+        window.addEventListener('keydown', (e) => {
+            if (!isPlaying) return;
+
+            const key = e.key;
+            if (keyMap.hasOwnProperty(key)) {
+                const trackIndex = keyMap[key];
+
+                // 讓對應的按鍵指示器加上按下特效
+                const indicator = document.getElementById(`key-${trackIndex}`);
+                if (indicator) {
+                    indicator.classList.add('active');
+                }
+
+                // 檢查該軌道上是否有在判定區範圍內的音符
+                checkHit(trackIndex);
+            }
+        });
+
+        // 【鍵盤放開監聽事件】移除按壓特效
+        window.addEventListener('keyup', (e) => {
+            const key = e.key;
+            if (keyMap.hasOwnProperty(key)) {
+                const trackIndex = keyMap[key];
+                const indicator = document.getElementById(`key-${trackIndex}`);
+                if (indicator) {
+                    indicator.classList.remove('active');
+                }
+            }
+        });
+
+        // 【判定擊中函數】
+        function checkHit(trackIndex) {
+            // 判定區的預設頂部位置大約在 300px 到 360px 之間
+            const hitZoneMin = 280;
+            const hitZoneMax = 360;
+
+            // 尋找同軌道且在判定區內的音符
+            for (let i = 0; i < notes.length; i++) {
+                let note = notes[i];
+                if (note.active && note.trackIndex === trackIndex) {
+                    // 檢查音符目前的位置是否剛好落在判定範圍內
+                    if (note.top >= hitZoneMin && note.top <= hitZoneMax) {
+                        // 成功擊中！
+                        note.active = false;
+                        note.element.remove();
+                        notes.splice(i, 1);
+
+                        // 加分並更新畫面
+                        score += 10;
+                        scoreDisplay.innerText = score;
+                        break; // 一次只判定一顆最近的音符
+                    }
+                }
+            }
+        }
+    </script>
+</body>
+</html>
